@@ -75,4 +75,17 @@ class ArticleSummaryExtensionTest extends TestCase
     {
         $this->assertTrue(method_exists('ArticleSummaryExtension', 'handleConfigureAction'));
     }
+
+    /**
+     * Test that the configuration form includes LM Studio provider
+     * 测试配置表单包含 LM Studio 提供商
+     */
+    public function testConfigureFormIncludesLmStudioProvider(): void
+    {
+        $configureForm = file_get_contents(__DIR__ . '/../configure.phtml');
+
+        $this->assertIsString($configureForm);
+        $this->assertStringContainsString('value="lmstudio"', $configureForm);
+        $this->assertStringContainsString('ArticleSummary.config.lmstudio', $configureForm);
+    }
 }

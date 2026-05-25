@@ -6,12 +6,12 @@ This extension for FreshRSS allows users to generate summaries of articles using
 
 ## Features
 
-- **Multiple API Providers**: Supports OpenAI, Ollama, and Gemini API providers for maximum flexibility.
+- **Multiple API Providers**: Supports OpenAI, Ollama, Gemini, and LM Studio API providers for maximum flexibility.
 - **API Configuration**: Easily configure the base URL, API key, model name, and prompt through a simple form.
 - **Summarize Button**: Adds a "summarize" button to each article, allowing users to generate a summary with a single click.
 - **Markdown Support**: Converts HTML content to Markdown before sending it to the API, ensuring compatibility with various language models.
 - **Streaming Response**: Processes and displays summarization results in real-time as they are received from the API.
-- **Automatic API Version Handling**: Automatically adds the appropriate API version path (e.g., `/v1` for OpenAI or `/v1beta` for Gemini) to the base URL if missing.
+- **Automatic API Version Handling**: Automatically adds the appropriate API version path (e.g., `/v1` for OpenAI-compatible providers or `/v1beta` for Gemini) to the base URL if missing.
 - **Enhanced Error Handling**: Provides detailed error messages in case of API errors or incomplete configurations.
 - **Content Security Policy**: Configured to allow API requests to external endpoints.
 - **Internationalization (i18n)**: Supports English, Simplified Chinese (zh-CN), and Traditional Chinese (zh-TW) languages.
@@ -27,9 +27,9 @@ This extension for FreshRSS allows users to generate summaries of articles using
 
 To configure the extension, follow these steps:
 
-1. **Base URL**: Enter the base URL of your language model API (e.g., `https://api.openai.com/`). Note that the URL should not include the version path (e.g., `/v1`).
-2. **API Key**: Provide your API key for authentication.
-3. **Model Name**: Specify the model name you wish to use for summarization (e.g., `gpt-3.5-turbo`).
+1. **Base URL**: Enter the base URL of your language model API (e.g., `https://api.openai.com/`). Note that the URL should not include the version path (e.g., `/v1`) unless you want to provide it explicitly. For LM Studio, the default local server URL is usually `http://localhost:1234`.
+2. **API Key**: Provide your API key for authentication. For Ollama and LM Studio, this may be left empty unless you enabled authentication.
+3. **Model Name**: Specify the model name you wish to use for summarization (e.g., `gpt-3.5-turbo`). For LM Studio, use the model identifier shown by LM Studio.
 4. **Prompt**: Add a prompt that will be included before the article content when sending the request to the API.
 
 ## Usage
@@ -103,6 +103,12 @@ This project is licensed under the MIT License. See the [LICENSE](LICENSE) file 
 - Inspired by the need for efficient article summarization tools.
 
 ## History
+- Version: 0.6.0 (2026-05-25)
+  > **Features Added**:
+  > - Added support for LM Studio as an OpenAI-compatible provider
+  > - Uses LM Studio's streaming Chat Completions endpoint
+  > - Allows LM Studio requests without an API key by default
+
 - Version: 0.5.2 (2026-01-13)
   > **Bug Fix**: Fixed issue where default prompt was not being restored after deleting old prompt
   > - Added logic to set prompt to null when empty string is submitted

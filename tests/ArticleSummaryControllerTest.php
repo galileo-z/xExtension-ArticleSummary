@@ -84,4 +84,18 @@ class ArticleSummaryControllerTest extends TestCase
     {
         $this->assertTrue(method_exists('FreshExtension_ArticleSummary_Controller', 'processNode'));
     }
+
+    /**
+     * Test that LM Studio can be used without an API key
+     * 测试 LM Studio 可以不配置 API 密钥
+     */
+    public function testLmStudioAllowsEmptyApiKey(): void
+    {
+        $controller = new \FreshExtension_ArticleSummary_Controller();
+        $method = new \ReflectionMethod('FreshExtension_ArticleSummary_Controller', 'allowsEmptyApiKey');
+
+        $this->assertTrue($method->invoke($controller, 'lmstudio'));
+        $this->assertTrue($method->invoke($controller, 'ollama'));
+        $this->assertFalse($method->invoke($controller, 'openai'));
+    }
 }

@@ -1,11 +1,16 @@
 {
   "name": "ArticleSummary",
   "author": "Liang",
-  "description": "Generate article summaries using OpenAI-compatible language model APIs. Supports both OpenAI and Ollama providers with a user-friendly configuration interface.",
-  "version": "0.5.2",
+  "description": "Generate article summaries using OpenAI-compatible language model APIs. Supports OpenAI, Ollama, Gemini, and LM Studio providers with a user-friendly configuration interface.",
+  "version": "0.6.0",
   "entrypoint": "ArticleSummary",
   "type": "user",
   "changelog": {
+    "0.6.0": [
+      "增加对 LM Studio 的支持",
+      "LM Studio 使用 OpenAI 兼容的 Chat Completions 流式接口",
+      "允许 LM Studio 在未配置 API 密钥时发送请求"
+    ],
     "0.5.2": [
       "修复了删除旧提示词后不会恢复默认提示词的问题",
       "当用户清空提示词并保存时，自动应用默认提示词"

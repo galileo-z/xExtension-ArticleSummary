@@ -27,13 +27,13 @@ final class FreshExtension_ArticleSummary_Controller extends Minz_ActionControll
     $oai_key = FreshRSS_Context::$user_conf->oai_key;
     $oai_model = FreshRSS_Context::$user_conf->oai_model;
     $oai_prompt = FreshRSS_Context::$user_conf->oai_prompt;
-    $oai_provider = FreshRSS_Context::$user_conf->oai_provider;
+    $oai_provider = FreshRSS_Context::$user_conf->oai_provider ?: 'openai';
 
     // Check if all required configurations are provided
     // 检查是否提供了所有必要的配置
     if (
       $this->isEmpty($oai_url)
-      || ($this->isEmpty($oai_key) && $oai_provider !== 'ollama')
+      || ($this->isEmpty($oai_key) && !$this->allowsEmptyApiKey($oai_provider))
       || $this->isEmpty($oai_model)
       || $this->isEmpty($oai_prompt)
     ) {
@@ -62,8 +62,8 @@ final class FreshExtension_ArticleSummary_Controller extends Minz_ActionControll
     $author = $entry->author(); // Get article author
     $content = $entry->content(); // Get article content
 
-    // Process API URL - add version if missing (only for OpenAI)
-    // 处理API URL - 如果缺少版本则添加（仅针对OpenAI）
+    // Process API URL - add version if missing
+    // 处理API URL - 如果缺少版本则添加
     $oai_url = rtrim($oai_url, '/'); // Remove trailing slash
     if (!preg_match('/\/v\d+(beta)?\/?$/', $oai_url)) {
       if ($oai_provider === "gemini") {
@@ -73,8 +73,8 @@ final class FreshExtension_ArticleSummary_Controller extends Minz_ActionControll
       }
     }
     
-    // Prepare OpenAI API response
-    // 准备OpenAI API响应
+    // Prepare OpenAI-compatible API response
+    // 准备OpenAI兼容API响应
     $successResponse = array(
       'response' => array(
         'data' => array(
@@ -96,7 +96,7 @@ final class FreshExtension_ArticleSummary_Controller extends Minz_ActionControll
           "n" => 1, // Generate summary
           "stream" => true
         ),
-        'provider' => 'openai',
+        'provider' => $oai_provider === 'lmstudio' ? 'lmstudio' : 'openai',
         'error' => null
       ),
       'status' => 200
@@ -153,10 +153,20 @@ final class FreshExtension_ArticleSummary_Controller extends Minz_ActionControll
    * 检查值是否为空
    * 
    * @param mixed $item The value to check
-   * @return bool True if the value is null, false otherwise
+   * @return bool True if the value is null or a blank string, false otherwise
    */
   private function isEmpty(mixed $item): bool {
-    return $item === null;
+    return $item === null || (is_string($item) && trim($item) === '');
+  }
+
+  /**
+   * Check whether a provider can be used without an API key.
+   *
+   * @param string $provider AI provider identifier
+   * @return bool True if the API key may be omitted
+   */
+  private function allowsEmptyApiKey(string $provider): bool {
+    return in_array($provider, ['ollama', 'lmstudio'], true);
   }
 
   /**

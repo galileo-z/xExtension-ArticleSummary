@@ -10,7 +10,8 @@ return array(
         'save' => '儲存',
         'openai' => 'OpenAI',
         'ollama' => 'Ollama',
-        'gemini' => 'Gemini'
+        'gemini' => 'Gemini',
+        'lmstudio' => 'LM Studio'
     ),
     'button' => array(
         'summarize' => '總結'

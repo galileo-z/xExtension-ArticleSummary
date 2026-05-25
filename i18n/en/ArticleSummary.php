@@ -10,7 +10,8 @@ return array(
         'save' => 'Save',
         'openai' => 'OpenAI',
         'ollama' => 'Ollama',
-        'gemini' => 'Gemini'
+        'gemini' => 'Gemini',
+        'lmstudio' => 'LM Studio'
     ),
     'button' => array(
         'summarize' => 'Summarize'

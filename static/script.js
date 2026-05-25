@@ -145,7 +145,7 @@ async function summarizeButtonClick(target) {
       
       // Send request to appropriate AI provider
       // 向合适的AI提供商发送请求
-      if (oaiProvider === 'openai') {
+      if (oaiProvider === 'openai' || oaiProvider === 'lmstudio') {
         await sendOpenAIRequest(container, oaiParams);
       } else if (oaiProvider === 'gemini') {
         await sendGeminiRequest(container, oaiParams);
@@ -165,11 +165,11 @@ async function summarizeButtonClick(target) {
 }
 
 /**
- * Send summarization request to OpenAI API
- * 向OpenAI API发送总结请求
+ * Send summarization request to OpenAI-compatible API
+ * 向OpenAI兼容API发送总结请求
  * 
  * @param {HTMLElement} container - The summary container element
- * @param {Object} oaiParams - OpenAI API parameters
+ * @param {Object} oaiParams - OpenAI-compatible API parameters
  */
 async function sendOpenAIRequest(container, oaiParams) {
   try {
@@ -178,16 +178,21 @@ async function sendOpenAIRequest(container, oaiParams) {
     let body = JSON.parse(JSON.stringify(oaiParams));
     delete body['oai_url'];
     delete body['oai_key'];
-    body["stream"] = true; // Ensure stream is true for OpenAI API
+    body["stream"] = true; // Ensure stream is true for OpenAI-compatible API
     
-    // Send POST request to OpenAI API
-    // 向OpenAI API发送POST请求
+    // Send POST request to OpenAI-compatible API
+    // 向OpenAI兼容API发送POST请求
+    const headers = {
+      'Content-Type': 'application/json'
+    };
+
+    if (oaiParams.oai_key && oaiParams.oai_key.trim() !== '') {
+      headers['Authorization'] = `Bearer ${oaiParams.oai_key}`;
+    }
+
     const response = await fetch(oaiParams.oai_url, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${oaiParams.oai_key}`
-      },
+      headers: headers,
       body: JSON.stringify(body)
     });
 

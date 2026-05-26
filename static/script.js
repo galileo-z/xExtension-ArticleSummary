@@ -180,7 +180,7 @@ async function summarizeButtonClick(target) {
 
   // Get the request URL and prepare data
   // 获取请求URL并准备数据
-  var url = target.dataset.request;
+  var url = decodeHtmlEntities(target.dataset.request || '');
   var data = {
     ajax: true,
     _csrf: context.csrf
@@ -229,11 +229,32 @@ async function summarizeButtonClick(target) {
     console.error(error);
     // Show more specific error message
     // 显示更具体的错误信息
-    const errorMsg = error.response?.data?.error?.message || 
-                    error.message || 
-                    'Request Failed';
+    const errorMsg = freshRssRequestErrorMessage(error, url);
     setOaiState(container, 2, errorMsg, null);
   }
+}
+
+function decodeHtmlEntities(value) {
+  var textarea = document.createElement('textarea');
+  var decoded = value;
+
+  for (var i = 0; i < 3; i++) {
+    textarea.innerHTML = decoded;
+    if (textarea.value === decoded) {
+      break;
+    }
+    decoded = textarea.value;
+  }
+
+  return decoded;
+}
+
+function freshRssRequestErrorMessage(error, requestUrl) {
+  if (error.response) {
+    return 'FreshRSS ArticleSummary endpoint returned HTTP ' + error.response.status + '\n' + requestUrl;
+  }
+
+  return error.message || 'Request Failed';
 }
 
 /**

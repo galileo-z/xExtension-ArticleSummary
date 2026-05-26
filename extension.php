@@ -84,7 +84,7 @@ final class ArticleSummaryExtension extends Minz_Extension
     // 向文章内容添加总结按钮和容器，并将翻译文本作为data属性
     $entry->_content(
       '<div class="oai-summary-wrap">'
-      . '<button type="button" data-request="' . $this->escape($url_summary) . '" '
+      . '<button type="button" data-request="' . $url_summary . '" '
       . 'data-summarize-text="' . $this->escape($summarizeText) . '" '
       . 'data-loading-text="' . $this->escape($loadingText) . '" '
       . 'data-error-text="' . $this->escape($errorText) . '" '

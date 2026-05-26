@@ -32,6 +32,12 @@
 3. **模型名称**：指定您希望用于总结的模型名称（例如，`gpt-3.5-turbo`）。LM Studio 请填写 LM Studio 中显示的模型标识符。
 4. **提示**：添加一个提示，该提示将在发送请求到 API 时包含在文章内容之前。
 
+### LM Studio 说明
+
+- 因为 FreshRSS 是从浏览器直接请求 LM Studio，需要在 LM Studio 的服务器设置中启用 CORS，或者用 `lms server start --cors` 启动服务。
+- 总结前需要先在 LM Studio 中加载模型，或者在服务器设置中启用 Just-in-Time Model Loading。
+- 如果用 `lms load <模型> --identifier "article-summary"` 加载模型，插件里的模型名称就填写 `article-summary`。
+
 ## 使用
 
 配置完成后，插件会自动为每篇文章添加一个“总结”按钮。点击此按钮将：

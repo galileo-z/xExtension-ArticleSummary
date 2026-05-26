@@ -32,6 +32,12 @@ To configure the extension, follow these steps:
 3. **Model Name**: Specify the model name you wish to use for summarization (e.g., `gpt-3.5-turbo`). For LM Studio, use the model identifier shown by LM Studio.
 4. **Prompt**: Add a prompt that will be included before the article content when sending the request to the API.
 
+### LM Studio Notes
+
+- Enable CORS in LM Studio's server settings, or start the server with `lms server start --cors`, because FreshRSS sends requests from the browser.
+- Load a model in LM Studio before summarizing, or enable Just-in-Time Model Loading in the server settings.
+- If you load a model with `lms load <model> --identifier "article-summary"`, set the extension's model name to `article-summary`.
+
 ## Usage
 
 Once configured, the extension will automatically add a "summarize" button to each article. Clicking this button will:

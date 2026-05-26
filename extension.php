@@ -84,11 +84,11 @@ final class ArticleSummaryExtension extends Minz_Extension
     // 向文章内容添加总结按钮和容器，并将翻译文本作为data属性
     $entry->_content(
       '<div class="oai-summary-wrap">'
-      . '<button data-request="' . $url_summary . '" '
-      . 'data-summarize-text="' . $summarizeText . '" '
-      . 'data-loading-text="' . $loadingText . '" '
-      . 'data-error-text="' . $errorText . '" '
-      . 'data-request-failed-text="' . $requestFailedText . '" '
+      . '<button type="button" data-request="' . $this->escape($url_summary) . '" '
+      . 'data-summarize-text="' . $this->escape($summarizeText) . '" '
+      . 'data-loading-text="' . $this->escape($loadingText) . '" '
+      . 'data-error-text="' . $this->escape($errorText) . '" '
+      . 'data-request-failed-text="' . $this->escape($requestFailedText) . '" '
       . 'class="oai-summary-btn"></button>'
       . '<div class="oai-summary-content"></div>'
       . '</div>'
@@ -130,5 +130,10 @@ final class ArticleSummaryExtension extends Minz_Extension
       // 保存配置
       FreshRSS_Context::$user_conf->save();
     }
+  }
+
+  private function escape(mixed $value): string
+  {
+    return htmlspecialchars((string)$value, ENT_QUOTES, 'UTF-8');
   }
 }

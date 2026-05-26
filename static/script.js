@@ -16,28 +16,96 @@ if (document.readyState && document.readyState !== 'loading') {
  * 为总结按钮配置事件监听器
  */
 function configureSummarizeButtons() {
-  document.getElementById('global').addEventListener('click', function (e) {
-    for (var target = e.target; target && target != this; target = target.parentNode) {
+  var root = document.getElementById('global') || document.body;
+  if (!root || root.dataset.oaiSummaryBound === 'true') {
+    return;
+  }
+
+  root.dataset.oaiSummaryBound = 'true';
+  initializeVisibleSummarizeButtons(root);
+
+  root.addEventListener('click', function (e) {
+    for (var target = e.target; target && target !== this; target = target.parentNode) {
       
       // Handle article header click to add text to summary button
       // 处理文章标题点击，为总结按钮添加文本
-      if (target.matches('.flux_header')) {
-        const button = target.nextElementSibling.querySelector('.oai-summary-btn');
-        button.innerHTML = button.dataset.summarizeText;
+      if (target.matches && target.matches('.flux_header')) {
+        syncSummaryButtonTextFromHeader(target);
       }
 
       // Handle summarize button click
       // 处理总结按钮点击
-      if (target.matches('.oai-summary-btn')) {
+      if (target.matches && target.matches('.oai-summary-btn')) {
         e.preventDefault();
         e.stopPropagation();
         if (target.dataset.request) {
+          ensureSummaryButtonText(target);
           summarizeButtonClick(target);
         }
         break;
       }
     }
   }, false);
+
+  document.addEventListener('freshrss:openArticle', function (event) {
+    initializeVisibleSummarizeButtons(event.target);
+    window.setTimeout(function () {
+      var threePanesView = document.getElementById('threepanesview');
+      if (threePanesView) {
+        initializeVisibleSummarizeButtons(threePanesView);
+      }
+    }, 0);
+  });
+
+  if (window.MutationObserver) {
+    var observer = new MutationObserver(function (mutations) {
+      mutations.forEach(function (mutation) {
+        Array.prototype.forEach.call(mutation.addedNodes, function (node) {
+          if (node.nodeType === 1) {
+            initializeVisibleSummarizeButtons(node);
+          }
+        });
+      });
+    });
+
+    observer.observe(root, {
+      childList: true,
+      subtree: true
+    });
+  }
+}
+
+function initializeVisibleSummarizeButtons(root) {
+  if (!root.querySelectorAll) {
+    return;
+  }
+
+  if (root.matches && root.matches('#threepanesview .oai-summary-btn, .flux.current .oai-summary-btn')) {
+    ensureSummaryButtonText(root);
+  }
+
+  Array.prototype.forEach.call(
+    root.querySelectorAll('#threepanesview .oai-summary-btn, .flux.current .oai-summary-btn'),
+    ensureSummaryButtonText
+  );
+}
+
+function ensureSummaryButtonText(button) {
+  if (button && !button.textContent.trim() && button.dataset.summarizeText) {
+    button.textContent = button.dataset.summarizeText;
+  }
+}
+
+function syncSummaryButtonTextFromHeader(header) {
+  var articleBody = header.nextElementSibling;
+  var button = articleBody ? articleBody.querySelector('.oai-summary-btn') : null;
+
+  if (!button) {
+    var article = header.closest ? header.closest('.flux, article, .entry') : null;
+    button = article ? article.querySelector('.oai-summary-btn') : null;
+  }
+
+  ensureSummaryButtonText(button);
 }
 
 /**
@@ -52,6 +120,10 @@ function configureSummarizeButtons() {
 function setOaiState(container, statusType, statusMsg, summaryText) {
   const button = container.querySelector('.oai-summary-btn');
   const content = container.querySelector('.oai-summary-content');
+
+  if (!button || !content) {
+    return;
+  }
   
   // Set different states based on statusType
   // 根据statusType设置不同状态
@@ -60,14 +132,14 @@ function setOaiState(container, statusType, statusMsg, summaryText) {
     // 加载状态
     container.classList.add('oai-loading');
     container.classList.remove('oai-error');
-    content.innerHTML = statusMsg;
+    content.textContent = statusMsg;
     button.disabled = true;
   } else if (statusType === 2) {
     // Error state
     // 错误状态
     container.classList.remove('oai-loading');
     container.classList.add('oai-error');
-    content.innerHTML = statusMsg;
+    content.textContent = statusMsg;
     button.disabled = false;
   } else {
     // Success state
@@ -93,17 +165,17 @@ function setOaiState(container, statusType, statusMsg, summaryText) {
  * @param {HTMLElement} target - The clicked button element
  */
 async function summarizeButtonClick(target) {
-  var container = target.parentNode;
+  var container = target.closest ? target.closest('.oai-summary-wrap') : target.parentNode;
   
   // Prevent multiple requests while loading
   // 加载时防止多次请求
-  if (container.classList.contains('oai-loading')) {
+  if (!container || container.classList.contains('oai-loading')) {
     return;
   }
 
   // Set loading state
   // 设置加载状态
-  const loadingText = container.querySelector('.oai-summary-btn').dataset.loadingText;
+  const loadingText = target.dataset.loadingText || 'Loading...';
   setOaiState(container, 1, loadingText, null);
 
   // Get the request URL and prepare data
@@ -128,8 +200,8 @@ async function summarizeButtonClick(target) {
 
     // Check if response is valid
     // 检查响应是否有效
-    if (response.status !== 200 || !xresp.response || !xresp.response.data) {
-      const requestFailedText = container.querySelector('.oai-summary-btn').dataset.requestFailedText;
+    if (response.status !== 200 || !xresp || !xresp.response || !xresp.response.data) {
+      const requestFailedText = target.dataset.requestFailedText || 'Request Failed';
       throw new Error(requestFailedText);
     }
 
@@ -197,7 +269,9 @@ async function sendOpenAIRequest(container, oaiParams) {
     });
 
     if (!response.ok) {
-      throw new Error('Request Failed');
+      const errorData = await response.json().catch(() => ({}));
+      const errorMsg = errorData.error?.message || errorData.message || response.statusText || 'Request Failed';
+      throw new Error(errorMsg);
     }
 
     // Process streaming response with buffer

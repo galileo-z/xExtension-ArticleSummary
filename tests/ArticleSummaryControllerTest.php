@@ -98,4 +98,22 @@ class ArticleSummaryControllerTest extends TestCase
         $this->assertTrue($method->invoke($controller, 'ollama'));
         $this->assertFalse($method->invoke($controller, 'openai'));
     }
+
+    /**
+     * Test that LM Studio base URLs are normalized to the chat completions endpoint
+     * 娴嬭瘯 LM Studio 鍩虹 URL 浼氳鑼冨寲涓?chat completions 鎺ュ彛
+     */
+    public function testOpenAiChatCompletionsUrlNormalizesLmStudioUrls(): void
+    {
+        $controller = new \FreshExtension_ArticleSummary_Controller();
+        $method = new \ReflectionMethod('FreshExtension_ArticleSummary_Controller', 'openAiChatCompletionsUrl');
+
+        $expected = 'http://localhost:1234/v1/chat/completions';
+
+        $this->assertSame($expected, $method->invoke($controller, 'http://localhost:1234'));
+        $this->assertSame($expected, $method->invoke($controller, 'http://localhost:1234/'));
+        $this->assertSame($expected, $method->invoke($controller, 'http://localhost:1234/v1'));
+        $this->assertSame($expected, $method->invoke($controller, 'http://localhost:1234/v1/'));
+        $this->assertSame($expected, $method->invoke($controller, 'http://localhost:1234/v1/chat/completions'));
+    }
 }

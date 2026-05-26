@@ -269,9 +269,8 @@ async function sendOpenAIRequest(container, oaiParams) {
     });
 
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      const errorMsg = errorData.error?.message || errorData.message || response.statusText || 'Request Failed';
-      throw new Error(errorMsg);
+      const errorMsg = await responseErrorMessage(response);
+      throw new Error('AI API returned HTTP ' + response.status + ': ' + errorMsg + '\n' + oaiParams.oai_url);
     }
 
     // Process streaming response with buffer
@@ -346,6 +345,25 @@ async function sendOpenAIRequest(container, oaiParams) {
 }
 
 
+async function responseErrorMessage(response) {
+  const fallback = response.statusText || 'Request Failed';
+  const bodyText = await response.text().catch(function () {
+    return '';
+  });
+
+  if (!bodyText) {
+    return fallback;
+  }
+
+  try {
+    const data = JSON.parse(bodyText);
+    return data.error?.message || data.error || data.message || fallback;
+  } catch (error) {
+    return bodyText || fallback;
+  }
+}
+
+
 /**
  * Send summarization request to Ollama API
  * 向Ollama API发送总结请求
@@ -374,7 +392,8 @@ async function sendOllamaRequest(container, oaiParams){
     });
 
     if (!response.ok) {
-      throw new Error('Request Failed');
+      const errorMsg = await responseErrorMessage(response);
+      throw new Error('AI API returned HTTP ' + response.status + ': ' + errorMsg + '\n' + oaiParams.oai_url);
     }
 
     // Process streaming response with buffer
@@ -458,9 +477,8 @@ async function sendGeminiRequest(container, oaiParams) {
     });
 
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      const errorMsg = errorData.error?.message || 'Request Failed';
-      throw new Error(errorMsg);
+      const errorMsg = await responseErrorMessage(response);
+      throw new Error('AI API returned HTTP ' + response.status + ': ' + errorMsg + '\n' + oaiParams.oai_url);
     }
 
     // Process streaming response with buffer

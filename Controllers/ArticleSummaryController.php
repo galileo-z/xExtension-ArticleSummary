@@ -64,21 +64,15 @@ final class FreshExtension_ArticleSummary_Controller extends Minz_ActionControll
 
     // Process API URL - add version if missing
     // 处理API URL - 如果缺少版本则添加
-    $oai_url = rtrim($oai_url, '/'); // Remove trailing slash
-    if (!preg_match('/\/v\d+(beta)?\/?$/', $oai_url)) {
-      if ($oai_provider === "gemini") {
-        $oai_url .= '/v1beta'; // Gemini heavily relies on v1beta for features like systemInstruction
-      } elseif ($oai_provider !== "ollama") {
-        $oai_url .= '/v1'; // Default to /v1 for OpenAI compatible APIs
-      }
-    }
+    $oai_url = rtrim(trim($oai_url), '/');
+    $openai_chat_url = $this->openAiChatCompletionsUrl($oai_url);
     
     // Prepare OpenAI-compatible API response
     // 准备OpenAI兼容API响应
     $successResponse = array(
       'response' => array(
         'data' => array(
-          "oai_url" => $oai_url . '/chat/completions',
+          "oai_url" => $openai_chat_url,
           "oai_key" => $oai_key,
           "model" => $oai_model,
           "messages" => [
@@ -126,6 +120,9 @@ final class FreshExtension_ArticleSummary_Controller extends Minz_ActionControll
     // 如果选择了Gemini API，则准备Gemini API响应
     if ($oai_provider === "gemini") {
       $oai_url = rtrim($oai_url, '/');
+      if (!preg_match('/\/v\d+(beta)?$/', $oai_url)) {
+        $oai_url .= '/v1beta'; // Gemini heavily relies on v1beta for features like systemInstruction
+      }
       $successResponse = array(
         'response' => array(
           'data' => array(
@@ -167,6 +164,26 @@ final class FreshExtension_ArticleSummary_Controller extends Minz_ActionControll
    */
   private function allowsEmptyApiKey(string $provider): bool {
     return in_array($provider, ['ollama', 'lmstudio'], true);
+  }
+
+  /**
+   * Normalize OpenAI-compatible base URLs to the chat completions endpoint.
+   *
+   * Accepts either a base URL such as http://localhost:1234 or
+   * http://localhost:1234/v1, or the full /chat/completions endpoint.
+   */
+  private function openAiChatCompletionsUrl(string $url): string {
+    $url = rtrim(trim($url), '/');
+
+    if (preg_match('#/chat/completions$#', $url)) {
+      return $url;
+    }
+
+    if (!preg_match('#/v\d+(beta)?$#', $url)) {
+      $url .= '/v1';
+    }
+
+    return $url . '/chat/completions';
   }
 
   /**

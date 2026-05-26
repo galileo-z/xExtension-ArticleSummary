@@ -17,6 +17,7 @@ final class FreshExtension_ArticleSummary_Controller extends Minz_ActionControll
     // 这对于 JSON API 响应是必要的，因为 header() 必须在任何输出之前调用
     // $this->view->_layout(false) 可能会触发某些输出，导致 headers already sent 错误
     ob_start();
+    @set_time_limit(180);
     
     $this->view->_layout(false);
     header('Content-Type: application/json');
@@ -54,7 +55,13 @@ final class FreshExtension_ArticleSummary_Controller extends Minz_ActionControll
     $entry = $entry_dao->searchById($entry_id);
 
     if ($entry === null) {
-      echo json_encode(array('status' => 404));
+      $this->jsonResponse(array(
+        'response' => array(
+          'data' => 'article not found',
+          'error' => 'entry_not_found'
+        ),
+        'status' => 404
+      ));
       return;
     }
 
@@ -62,87 +69,35 @@ final class FreshExtension_ArticleSummary_Controller extends Minz_ActionControll
     $author = $entry->author(); // Get article author
     $content = $entry->content(); // Get article content
 
-    // Process API URL - add version if missing
-    // 处理API URL - 如果缺少版本则添加
-    $oai_url = rtrim(trim($oai_url), '/');
-    $openai_chat_url = $this->openAiChatCompletionsUrl($oai_url);
-    
-    // Prepare OpenAI-compatible API response
-    // 准备OpenAI兼容API响应
-    $successResponse = array(
-      'response' => array(
-        'data' => array(
-          "oai_url" => $openai_chat_url,
-          "oai_key" => $oai_key,
-          "model" => $oai_model,
-          "messages" => [
-            [
-              "role" => "system",
-              "content" => $oai_prompt
-            ],
-            [
-              "role" => "user",
-              "content" => "Title: " . $title . "\nAuthor: " . $author . "\n\nContent: " . $this->htmlToMarkdown($content),
-            ]
-          ],
-          "max_tokens" => 2048, // You can adjust the length of the summary as needed
-          "temperature" => 0.7, // You can adjust the randomness/temperature of the generated text as needed
-          "n" => 1, // Generate summary
-          "stream" => true
-        ),
-        'provider' => $oai_provider === 'lmstudio' ? 'lmstudio' : 'openai',
-        'error' => null
-      ),
-      'status' => 200
-    );
+    $articleText = "Title: " . $title . "\nAuthor: " . $author . "\n\nContent: " . $this->htmlToMarkdown($content);
 
-    // Prepare Ollama API response if selected
-    // 如果选择了Ollama API，则准备Ollama API响应
-    if ($oai_provider === "ollama") {
-      $successResponse = array(
+    try {
+      $summary = $this->summarizeWithProvider(
+        (string)$oai_provider,
+        (string)$oai_url,
+        (string)$oai_key,
+        (string)$oai_model,
+        (string)$oai_prompt,
+        $articleText
+      );
+
+      $this->jsonResponse(array(
         'response' => array(
-          'data' => array(
-            "oai_url" => rtrim($oai_url, '/') . '/api/generate',
-            "oai_key" => $oai_key,
-            "model" => $oai_model,
-            "system" => $oai_prompt,
-            "prompt" =>  "Title: " . $title . "\nAuthor: " . $author . "\n\nContent: " . $this->htmlToMarkdown($content),
-            "stream" => true,
-          ),
-          'provider' => 'ollama',
+          'data' => $summary,
+          'provider' => $oai_provider,
           'error' => null
         ),
         'status' => 200
-      );
-    }
-
-    // Prepare Gemini API response if selected
-    // 如果选择了Gemini API，则准备Gemini API响应
-    if ($oai_provider === "gemini") {
-      $oai_url = rtrim($oai_url, '/');
-      if (!preg_match('/\/v\d+(beta)?$/', $oai_url)) {
-        $oai_url .= '/v1beta'; // Gemini heavily relies on v1beta for features like systemInstruction
-      }
-      $successResponse = array(
+      ));
+    } catch (Throwable $error) {
+      $this->jsonResponse(array(
         'response' => array(
-          'data' => array(
-            "oai_url" => $oai_url . '/models/' . $oai_model . ':streamGenerateContent',
-            "oai_key" => $oai_key,
-            "model" => $oai_model,
-            "systemInstruction" => $oai_prompt,
-            "prompt" => "Title: " . $title . "\nAuthor: " . $author . "\n\nContent: " . $this->htmlToMarkdown($content),
-          ),
-          'provider' => 'gemini',
-          'error' => null
+          'data' => $error->getMessage(),
+          'error' => 'ai_api'
         ),
         'status' => 200
-      );
+      ));
     }
-
-    // Send response
-    // 发送响应
-    echo json_encode($successResponse);
-    return;
   }
 
   /**
@@ -184,6 +139,236 @@ final class FreshExtension_ArticleSummary_Controller extends Minz_ActionControll
     }
 
     return $url . '/chat/completions';
+  }
+
+  /**
+   * @param array<string, mixed> $data
+   */
+  private function jsonResponse(array $data): void {
+    echo json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+  }
+
+  private function summarizeWithProvider(
+    string $provider,
+    string $baseUrl,
+    string $apiKey,
+    string $model,
+    string $systemPrompt,
+    string $articleText
+  ): string {
+    if ($provider === 'ollama') {
+      return $this->summarizeOllama($baseUrl, $apiKey, $model, $systemPrompt, $articleText);
+    }
+
+    if ($provider === 'gemini') {
+      return $this->summarizeGemini($baseUrl, $apiKey, $model, $systemPrompt, $articleText);
+    }
+
+    return $this->summarizeOpenAiCompatible($baseUrl, $apiKey, $model, $systemPrompt, $articleText);
+  }
+
+  private function summarizeOpenAiCompatible(
+    string $baseUrl,
+    string $apiKey,
+    string $model,
+    string $systemPrompt,
+    string $articleText
+  ): string {
+    $headers = ['Content-Type: application/json'];
+    if (trim($apiKey) !== '') {
+      $headers[] = 'Authorization: Bearer ' . $apiKey;
+    }
+
+    $json = $this->postJson($this->openAiChatCompletionsUrl($baseUrl), array(
+      'model' => $model,
+      'messages' => array(
+        array(
+          'role' => 'system',
+          'content' => $systemPrompt,
+        ),
+        array(
+          'role' => 'user',
+          'content' => $articleText,
+        ),
+      ),
+      'max_tokens' => 2048,
+      'temperature' => 0.7,
+      'n' => 1,
+      'stream' => false,
+    ), $headers);
+
+    $content = $json['choices'][0]['message']['content'] ?? null;
+    if (!is_string($content) || trim($content) === '') {
+      throw new RuntimeException('AI API response did not include summary text');
+    }
+
+    return $content;
+  }
+
+  private function summarizeOllama(
+    string $baseUrl,
+    string $apiKey,
+    string $model,
+    string $systemPrompt,
+    string $articleText
+  ): string {
+    $headers = ['Content-Type: application/json'];
+    if (trim($apiKey) !== '') {
+      $headers[] = 'Authorization: Bearer ' . $apiKey;
+    }
+
+    $json = $this->postJson(rtrim(trim($baseUrl), '/') . '/api/generate', array(
+      'model' => $model,
+      'system' => $systemPrompt,
+      'prompt' => $articleText,
+      'stream' => false,
+    ), $headers);
+
+    $content = $json['response'] ?? null;
+    if (!is_string($content) || trim($content) === '') {
+      throw new RuntimeException('Ollama response did not include summary text');
+    }
+
+    return $content;
+  }
+
+  private function summarizeGemini(
+    string $baseUrl,
+    string $apiKey,
+    string $model,
+    string $systemPrompt,
+    string $articleText
+  ): string {
+    $baseUrl = rtrim(trim($baseUrl), '/');
+    if (!preg_match('/\/v\d+(beta)?$/', $baseUrl)) {
+      $baseUrl .= '/v1beta';
+    }
+
+    $url = $baseUrl . '/models/' . rawurlencode($model) . ':generateContent';
+    if (trim($apiKey) !== '') {
+      $url .= '?key=' . rawurlencode($apiKey);
+    }
+
+    $json = $this->postJson($url, array(
+      'systemInstruction' => array(
+        'parts' => array(array('text' => $systemPrompt)),
+      ),
+      'contents' => array(
+        array(
+          'parts' => array(array('text' => $articleText)),
+        ),
+      ),
+    ), ['Content-Type: application/json']);
+
+    $parts = $json['candidates'][0]['content']['parts'] ?? null;
+    if (!is_array($parts)) {
+      throw new RuntimeException('Gemini response did not include summary text');
+    }
+
+    $content = '';
+    foreach ($parts as $part) {
+      if (isset($part['text']) && is_string($part['text'])) {
+        $content .= $part['text'];
+      }
+    }
+
+    if (trim($content) === '') {
+      throw new RuntimeException('Gemini response did not include summary text');
+    }
+
+    return $content;
+  }
+
+  /**
+   * @param array<string, mixed> $body
+   * @param string[] $headers
+   * @return array<string, mixed>
+   */
+  private function postJson(string $url, array $body, array $headers): array {
+    $requestBody = json_encode($body, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    if ($requestBody === false) {
+      throw new RuntimeException('Failed to encode AI API request');
+    }
+
+    $responseBody = '';
+    $statusCode = 0;
+
+    if (function_exists('curl_init')) {
+      $ch = curl_init($url);
+      if ($ch === false) {
+        throw new RuntimeException('Failed to initialize HTTP client');
+      }
+
+      curl_setopt_array($ch, array(
+        CURLOPT_POST => true,
+        CURLOPT_HTTPHEADER => $headers,
+        CURLOPT_POSTFIELDS => $requestBody,
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_TIMEOUT => 180,
+      ));
+
+      $responseBody = curl_exec($ch);
+      $statusCode = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
+      $curlError = curl_error($ch);
+      curl_close($ch);
+
+      if ($responseBody === false) {
+        throw new RuntimeException('AI API request failed: ' . $curlError);
+      }
+    } else {
+      $context = stream_context_create(array(
+        'http' => array(
+          'method' => 'POST',
+          'header' => implode("\r\n", $headers),
+          'content' => $requestBody,
+          'ignore_errors' => true,
+          'timeout' => 180,
+        ),
+      ));
+
+      $responseBody = file_get_contents($url, false, $context);
+      if ($responseBody === false) {
+        throw new RuntimeException('AI API request failed');
+      }
+
+      $statusCode = $this->statusCodeFromHeaders($http_response_header ?? array());
+    }
+
+    if ($statusCode < 200 || $statusCode >= 300) {
+      throw new RuntimeException('AI API returned HTTP ' . $statusCode . ': ' . $this->responseErrorMessage($responseBody));
+    }
+
+    $json = json_decode($responseBody, true);
+    if (!is_array($json)) {
+      throw new RuntimeException('AI API returned invalid JSON: ' . substr($responseBody, 0, 500));
+    }
+
+    return $json;
+  }
+
+  /**
+   * @param string[] $headers
+   */
+  private function statusCodeFromHeaders(array $headers): int {
+    foreach ($headers as $header) {
+      if (preg_match('/^HTTP\/\S+\s+(\d+)/', $header, $matches)) {
+        return (int)$matches[1];
+      }
+    }
+
+    return 0;
+  }
+
+  private function responseErrorMessage(string $responseBody): string {
+    $json = json_decode($responseBody, true);
+    if (is_array($json)) {
+      $message = $json['error']['message'] ?? $json['message'] ?? $json['error'] ?? null;
+      if (is_string($message) && $message !== '') {
+        return $message;
+      }
+    }
+
+    return substr($responseBody, 0, 500);
   }
 
   /**

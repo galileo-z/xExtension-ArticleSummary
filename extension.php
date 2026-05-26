@@ -9,9 +9,7 @@ final class ArticleSummaryExtension extends Minz_Extension
    * Content Security Policy settings
    * 内容安全策略设置
    */
-  protected array $csp_policies = [
-    'default-src' => '*',
-  ];
+  protected array $csp_policies = [];
 
   /**
    * Initialize the extension

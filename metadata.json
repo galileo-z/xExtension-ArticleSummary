@@ -2,10 +2,14 @@
   "name": "ArticleSummary",
   "author": "Liang",
   "description": "Generate article summaries using OpenAI-compatible language model APIs. Supports OpenAI, Ollama, Gemini, and LM Studio providers with a user-friendly configuration interface.",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "entrypoint": "ArticleSummary",
   "type": "user",
   "changelog": {
+    "0.7.0": [
+      "Proxy AI summarization requests through the FreshRSS server instead of calling AI APIs from the browser",
+      "Avoid browser CORS, mixed-content, and per-user localhost issues for shared FreshRSS accounts"
+    ],
     "0.6.0": [
       "增加对 LM Studio 的支持",
       "LM Studio 使用 OpenAI 兼容的 Chat Completions 流式接口",

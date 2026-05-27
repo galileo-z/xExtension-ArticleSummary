@@ -102,13 +102,35 @@ class ArticleSummaryControllerTest extends TestCase
         $method = new \ReflectionMethod('FreshExtension_ArticleSummary_Controller', 'addOpenAiCompatibleThinking');
 
         $openAiBody = [];
-        $method->invokeArgs($controller, [&$openAiBody, 'https://api.openai.com', true]);
+        $method->invokeArgs($controller, [&$openAiBody, 'openai', 'https://api.openai.com', true]);
         $this->assertArrayNotHasKey('enable_thinking', $openAiBody);
 
         $compatibleBody = [];
-        $method->invokeArgs($controller, [&$compatibleBody, 'https://dashscope.aliyuncs.com/compatible-mode/v1', false]);
+        $method->invokeArgs($controller, [&$compatibleBody, 'openai', 'https://dashscope.aliyuncs.com/compatible-mode/v1', false]);
         $this->assertArrayHasKey('enable_thinking', $compatibleBody);
         $this->assertFalse($compatibleBody['enable_thinking']);
+    }
+
+    /**
+     * Test that LM Studio uses reasoning effort fields instead of enable_thinking
+     * 测试 LM Studio 使用 reasoning effort 字段而不是 enable_thinking
+     */
+    public function testLmStudioThinkingFieldUsesReasoningEffort(): void
+    {
+        $controller = new \FreshExtension_ArticleSummary_Controller();
+        $method = new \ReflectionMethod('FreshExtension_ArticleSummary_Controller', 'addOpenAiCompatibleThinking');
+
+        $disabledBody = [];
+        $method->invokeArgs($controller, [&$disabledBody, 'lmstudio', 'http://localhost:1234/v1', false]);
+        $this->assertSame('none', $disabledBody['reasoning_effort']);
+        $this->assertSame(0, $disabledBody['reasoning_tokens']);
+        $this->assertArrayNotHasKey('enable_thinking', $disabledBody);
+
+        $enabledBody = [];
+        $method->invokeArgs($controller, [&$enabledBody, 'lmstudio', 'http://localhost:1234/v1', true]);
+        $this->assertSame('medium', $enabledBody['reasoning_effort']);
+        $this->assertArrayNotHasKey('reasoning_tokens', $enabledBody);
+        $this->assertArrayNotHasKey('enable_thinking', $enabledBody);
     }
 
     /**

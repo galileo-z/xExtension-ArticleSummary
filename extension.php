@@ -109,6 +109,7 @@ final class ArticleSummaryExtension extends Minz_Extension
       $oai_model = Minz_Request::param('oai_model', '');
       $oai_prompt = Minz_Request::param('oai_prompt', '');
       $oai_provider = Minz_Request::param('oai_provider', '');
+      $oai_thinking = Minz_Request::param('oai_thinking', '') === '1' ? '1' : '0';
       
       // If prompt is empty string, set to null so default can be applied
       // 如果提示词为空字符串，则设置为null以便应用默认值
@@ -123,6 +124,7 @@ final class ArticleSummaryExtension extends Minz_Extension
       FreshRSS_Context::$user_conf->oai_model = $oai_model;
       FreshRSS_Context::$user_conf->oai_prompt = $oai_prompt;
       FreshRSS_Context::$user_conf->oai_provider = $oai_provider;
+      FreshRSS_Context::$user_conf->oai_thinking = $oai_thinking;
       
       // Save the configuration
       // 保存配置

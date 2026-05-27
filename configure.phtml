@@ -4,6 +4,8 @@ $oai_key = FreshRSS_Context::$user_conf->oai_key;
 $oai_model = FreshRSS_Context::$user_conf->oai_model;
 $oai_prompt = FreshRSS_Context::$user_conf->oai_prompt;
 $oai_provider = FreshRSS_Context::$user_conf->oai_provider ?: 'openai'; // Default to OpenAI
+$oai_thinking = FreshRSS_Context::$user_conf->oai_thinking ?? false;
+$oai_thinking = $oai_thinking === true || $oai_thinking === 1 || $oai_thinking === '1' || $oai_thinking === 'true' || $oai_thinking === 'on';
 ?>
 <form action="<?php echo _url('extension', 'configure', 'e', urlencode($this->getName())); ?>" method="post">
   <input type="hidden" name="_csrf" value="<?php echo FreshRSS_Auth::csrfToken(); ?>" />
@@ -26,6 +28,10 @@ $oai_provider = FreshRSS_Context::$user_conf->oai_provider ?: 'openai'; // Defau
     <input type="text" name="oai_key" id="oai_key" value="<?php echo $oai_key; ?>">
     <label for="oai_model"><?php echo _t('ArticleSummary.config.model_name'); ?></label>
     <input type="text" name="oai_model" id="oai_model" value="<?php echo $oai_model; ?>">
+    <label for="oai_thinking">
+      <input type="checkbox" name="oai_thinking" id="oai_thinking" value="1" <?php echo ($oai_thinking ? 'checked' : ''); ?>>
+      <?php echo _t('ArticleSummary.config.enable_thinking'); ?>
+    </label>
     <label for="oai_prompt"><?php echo _t('ArticleSummary.config.prompt'); ?></label>
     <textarea name="oai_prompt" id="oai_prompt"
       placeholder="<?php echo _t('ArticleSummary.config.default_prompt'); ?>"><?php echo $oai_prompt; ?></textarea>

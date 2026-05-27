@@ -77,6 +77,41 @@ class ArticleSummaryControllerTest extends TestCase
     }
 
     /**
+     * Test that stored checkbox values can be converted to booleans
+     * 测试复选框配置值可以转换为布尔值
+     */
+    public function testToBoolConvertsStoredCheckboxValues(): void
+    {
+        $controller = new \FreshExtension_ArticleSummary_Controller();
+        $method = new \ReflectionMethod('FreshExtension_ArticleSummary_Controller', 'toBool');
+
+        $this->assertTrue($method->invoke($controller, '1'));
+        $this->assertTrue($method->invoke($controller, 'true'));
+        $this->assertTrue($method->invoke($controller, true));
+        $this->assertFalse($method->invoke($controller, '0'));
+        $this->assertFalse($method->invoke($controller, null));
+    }
+
+    /**
+     * Test that thinking fields are only added to compatible OpenAI-style endpoints
+     * 测试仅向兼容端点添加思考字段
+     */
+    public function testOpenAiCompatibleThinkingFieldSkipsOfficialOpenAiHost(): void
+    {
+        $controller = new \FreshExtension_ArticleSummary_Controller();
+        $method = new \ReflectionMethod('FreshExtension_ArticleSummary_Controller', 'addOpenAiCompatibleThinking');
+
+        $openAiBody = [];
+        $method->invokeArgs($controller, [&$openAiBody, 'https://api.openai.com', true]);
+        $this->assertArrayNotHasKey('enable_thinking', $openAiBody);
+
+        $compatibleBody = [];
+        $method->invokeArgs($controller, [&$compatibleBody, 'https://dashscope.aliyuncs.com/compatible-mode/v1', false]);
+        $this->assertArrayHasKey('enable_thinking', $compatibleBody);
+        $this->assertFalse($compatibleBody['enable_thinking']);
+    }
+
+    /**
      * Test that the processNode method exists
      * 测试 processNode 方法是否存在
      */

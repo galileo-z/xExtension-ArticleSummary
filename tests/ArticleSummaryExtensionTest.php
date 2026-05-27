@@ -88,4 +88,17 @@ class ArticleSummaryExtensionTest extends TestCase
         $this->assertStringContainsString('value="lmstudio"', $configureForm);
         $this->assertStringContainsString('ArticleSummary.config.lmstudio', $configureForm);
     }
+
+    /**
+     * Test that the configuration form includes the thinking option
+     * 测试配置表单包含思考选项
+     */
+    public function testConfigureFormIncludesThinkingOption(): void
+    {
+        $configureForm = file_get_contents(__DIR__ . '/../configure.phtml');
+
+        $this->assertIsString($configureForm);
+        $this->assertStringContainsString('name="oai_thinking"', $configureForm);
+        $this->assertStringContainsString('ArticleSummary.config.enable_thinking', $configureForm);
+    }
 }
